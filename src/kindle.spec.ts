@@ -1,11 +1,16 @@
 import "dotenv/config";
 import { test, expect, describe } from "vitest";
-import { Kindle, KindleConfiguration } from "./kindle";
+import { Kindle, KindleConfiguration, TLSClientResponseData } from "./kindle";
 import { useScenario } from "./__test__/scenario";
 import { singleBook } from "./__test__/scenarios/single-book";
 import { multiplePages } from "./__test__/scenarios/multiple-pages";
 import { startSession } from "./__test__/scenarios/start-session";
+import { signinRedirect } from "./__test__/scenarios/signin-redirect";
+import { getError } from "./__test__/get-error";
 import { Filter } from "./query-filter";
+import { AuthSessionError } from "./errors/auth-session-error";
+import { unexpectedResponse } from "./__test__/scenarios/unexpected-response";
+import { UnexpectedResponseError } from "./errors/unexpected-response-error";
 
 const cookies = process.env.COOKIES;
 
@@ -83,4 +88,61 @@ describe("pagination", () => {
     expect(books).toMatchSnapshot();
     expect(books.length).toBe(2);
   });
+});
+
+describe("auth errors", () => {
+  test("should throw when session expired", async () => {
+    // given
+    const {
+      startSession: {
+        meta: { response },
+      },
+    } = useScenario(signinRedirect());
+
+    // when
+    const error = await getError(
+      async (): Promise<unknown> => await Kindle.fromConfig(config())
+    );
+
+    // then
+    expect(error).toBeInstanceOf(AuthSessionError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        message: "Session expired",
+        response,
+      })
+    );
+  });
+});
+
+describe("unexpected response errors", () => {
+  test.each([400])(
+    "should throw when response status is unexpected %s",
+    async (status) => {
+      // given
+      const response = {
+        headers: {},
+        status,
+        body: "{}",
+        cookies: {},
+        target:
+          "https://read.amazon.com/kindle-library/search?query=&libraryType=BOOKS&sortType=acquisition_desc&querySize=50",
+      } satisfies TLSClientResponseData;
+      useScenario(unexpectedResponse({ response }));
+
+      // when
+      const error = await getError(
+        async (): Promise<unknown> => await Kindle.fromConfig(config())
+      );
+
+      // then
+      expect(error).toBeInstanceOf(UnexpectedResponseError);
+      expect(error).toEqual(
+        expect.objectContaining({
+          message: `Unexpected status code: ${status}`,
+          response,
+        })
+      );
+    }
+  );
 });
