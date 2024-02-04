@@ -8,7 +8,7 @@ import {
 import { Filter, Query } from "./query-filter.js";
 
 export type { KindleBook, KindleBookDetails } from "./book.js";
-export type { KindleOwnedBookMetadataResponse } from "./book-metadata";
+export type { KindleOwnedBookMetadataResponse } from "./book-metadata.js";
 
 export {
   HttpClient,
@@ -18,7 +18,10 @@ export {
 export type {
   TLSClientRequestPayload,
   TLSClientResponseData,
-} from "./tls-client-api";
+} from "./tls-client-api.js";
+
+export { AuthSessionError } from "./errors/auth-session-error.js";
+export { UnexpectedResponseError } from "./errors/unexpected-response-error.js";
 
 export type KindleConfiguration = {
   /**
