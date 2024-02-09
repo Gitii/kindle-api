@@ -1,4 +1,4 @@
-import { TLSClientResponseData } from "../kindle";
+import { TLSClientResponseData } from "../kindle.js";
 
 export class UnexpectedResponseError extends Error {
   constructor(message: string, public response: TLSClientResponseData) {
