@@ -50,11 +50,21 @@ export type KindleConfiguration = {
     cookies: KindleRequiredCookies,
     clientOptions: TlsClientConfig
   ) => HttpClient;
+
+  /**
+   * Base url of the kindle service.
+   * Amazon has different regional service endpoints, for example https://lesen.amazon.de/kindle-library (DACH region) or https://read.amazon.com/kindle-library (worldwide).
+   * Path and query parameters will be ignored.
+   *
+   * @default "https://read.amazon.com"
+   */
+  baseUrl?: string;
 };
 
 export type KindleOptions = {
   config: KindleConfiguration;
   sessionId: string;
+  baseUrl: string;
 };
 
 export type KindleFromCookieOptions = {
@@ -63,13 +73,18 @@ export type KindleFromCookieOptions = {
 };
 
 export class Kindle {
-  public static DEVICE_TOKEN_URL =
-    "https://read.amazon.com/service/web/register/getDeviceToken";
-  public static readonly BOOKS_URL =
-    "https://read.amazon.com/kindle-library/search?query=&libraryType=BOOKS&sortType=recency&querySize=50";
+  public static readonly BASE_URL = "https://read.amazon.com";
+
+  public static readonly DEVICE_TOKEN_PATH =
+    "service/web/register/getDeviceToken";
+
+  public static readonly BOOKS_PATH =
+    "kindle-library/search?query=&libraryType=BOOKS&sortType=recency&querySize=50";
+
   public static readonly DEFAULT_QUERY = Object.freeze({
     sortType: "acquisition_desc",
   } satisfies Query);
+
   public static readonly DEFAULT_FILTER = Object.freeze({
     querySize: 50,
     fetchAllPages: false,
@@ -84,6 +99,7 @@ export class Kindle {
    */
   readonly defaultBooks: KindleBook[];
   readonly #client: HttpClient;
+  readonly #baseUrl: string;
 
   constructor(
     private options: KindleOptions,
@@ -94,9 +110,11 @@ export class Kindle {
   ) {
     this.defaultBooks = prePopulatedBooks ?? [];
     this.#client = client;
+    this.#baseUrl = options.baseUrl;
   }
 
   static async fromConfig(config: KindleConfiguration): Promise<Kindle> {
+    const baseUrl = new URL(config.baseUrl ?? Kindle.BASE_URL).origin;
     const cookies =
       typeof config.cookies === "string"
         ? Kindle.deserializeCookies(config.cookies)
@@ -105,10 +123,14 @@ export class Kindle {
       config.clientFactory?.(cookies, config.tlsServer) ??
       new HttpClient(cookies, config.tlsServer);
 
-    const { sessionId, books } = await Kindle.baseRequest(client);
+    const { sessionId, books } = await Kindle.baseRequest(baseUrl, client);
     client.updateSession(sessionId);
 
-    const deviceInfo = await Kindle.deviceToken(client, config.deviceToken);
+    const deviceInfo = await Kindle.deviceToken(
+      baseUrl,
+      client,
+      config.deviceToken
+    );
     client.updateAdpSession(deviceInfo.deviceSessionToken);
 
     return new this(
@@ -118,6 +140,7 @@ export class Kindle {
           cookies,
         },
         sessionId,
+        baseUrl,
       },
       client,
       books
@@ -125,6 +148,7 @@ export class Kindle {
   }
 
   static async deviceToken(
+    baseUrl: string,
     client: HttpClient,
     token: string
   ): Promise<KindleDeviceInfo> {
@@ -132,12 +156,13 @@ export class Kindle {
       serialNumber: token,
       deviceType: token,
     });
-    const url = `${Kindle.DEVICE_TOKEN_URL}?${params.toString()}`;
+    const url = `${baseUrl}/${Kindle.DEVICE_TOKEN_PATH}?${params.toString()}`;
     const response = await client.request(url);
     return JSON.parse(response.body) as KindleDeviceInfo;
   }
 
   static async baseRequest(
+    baseUrl: string,
     client: HttpClient,
     version?: string,
     args?: {
@@ -162,7 +187,7 @@ export class Kindle {
 
     // loop until we get less than the requested amount of books or hit the limit
     do {
-      const url = toUrl(query, filter);
+      const url = toUrl(baseUrl, query, filter);
       const { books, sessionId, paginationToken } = await fetchBooks(
         client,
         url,
@@ -190,7 +215,12 @@ export class Kindle {
     query?: Query;
     filter?: Filter;
   }): Promise<KindleBook[]> {
-    const result = await Kindle.baseRequest(this.#client, undefined, args);
+    const result = await Kindle.baseRequest(
+      this.#baseUrl,
+      this.#client,
+      undefined,
+      args
+    );
     // refreshing the internal session every time books is called.
     // This doesn't prevent us from calling the books endpoint but
     // it does prevent requesting the metadata of individual books
