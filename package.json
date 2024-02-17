@@ -3,6 +3,9 @@
   "license": "MIT",
   "version": "1.4.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "types": "./dist/esm/kindle.d.ts",
   "main": "./dist/cjs/kindle.js",
   "module": "./dist/esm/kindle.js",
