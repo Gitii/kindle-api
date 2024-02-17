@@ -14,12 +14,12 @@
     }
   },
   "scripts": {
-    "dev": "pnpm run build:dev",
+    "dev": "yarn run build:dev",
     "build": "tsc -p ./tsconfig.esm.json",
     "build:cjs": "tsc -p ./tsconfig.cjs.json",
-    "build:all": "pnpm run build && pnpm build:cjs && sh ./fixup.sh",
-    "build:dev": "pnpm run build --watch",
-    "build:production": "pnpm run build:all",
+    "build:all": "yarn run build && yarn build:cjs && sh ./fixup.sh",
+    "build:dev": "yarn run build --watch",
+    "build:production": "yarn run build:all",
     "test": "DOTENV_CONFIG_PATH=./.env.test NODE_OPTIONS='-r dotenv/config'  vitest"
   },
   "devDependencies": {
@@ -32,5 +32,6 @@
     "msw": "^2.1.7",
     "typescript": "^4.9.3",
     "vitest": "^1.2.2"
-  }
+  },
+  "packageManager": "yarn@4.1.0"
 }
