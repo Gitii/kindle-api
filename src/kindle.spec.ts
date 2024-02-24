@@ -1,16 +1,16 @@
+import { faker } from "@faker-js/faker";
 import "dotenv/config";
 import { test, expect, describe } from "vitest";
-import { Kindle, KindleConfiguration, TLSClientResponseData } from "./kindle";
-import { useScenario } from "./__test__/scenario";
-import { singleBook } from "./__test__/scenarios/single-book";
-import { multiplePages } from "./__test__/scenarios/multiple-pages";
-import { startSession } from "./__test__/scenarios/start-session";
-import { signinRedirect } from "./__test__/scenarios/signin-redirect";
-import { getError } from "./__test__/get-error";
-import { Filter } from "./query-filter";
-import { AuthSessionError } from "./errors/auth-session-error";
-import { unexpectedResponse } from "./__test__/scenarios/unexpected-response";
-import { UnexpectedResponseError } from "./errors/unexpected-response-error";
+import { getError } from "./__test__/get-error.js";
+import { useScenario } from "./__test__/scenario.js";
+import { multiplePages } from "./__test__/scenarios/multiple-pages.js";
+import { signinRedirect } from "./__test__/scenarios/signin-redirect.js";
+import { singleBook } from "./__test__/scenarios/single-book.js";
+import { startSession } from "./__test__/scenarios/start-session.js";
+import { unexpectedResponse } from "./__test__/scenarios/unexpected-response.js";
+import { KindleConfiguration, Kindle, AuthSessionError, UnexpectedResponseError } from "./kindle.js";
+import { Filter } from "./query-filter.js";
+import { TLSClientResponseData } from "./tls-client-api.js";
 
 const cookies = process.env.COOKIES;
 
@@ -117,7 +117,7 @@ describe("auth errors", () => {
 
 describe("unexpected response errors", () => {
   test.each([400])(
-    "should throw when response status is unexpected %s",
+    "should throw when start session response status is unexpected %s",
     async (status) => {
       // given
       const response = {
@@ -125,14 +125,77 @@ describe("unexpected response errors", () => {
         status,
         body: "{}",
         cookies: {},
-        target:
-          "https://read.amazon.com/kindle-library/search?query=&libraryType=BOOKS&sortType=acquisition_desc&querySize=50",
+        target: faker.internet.url(),
       } satisfies TLSClientResponseData;
-      useScenario(unexpectedResponse({ response }));
+      useScenario(unexpectedResponse({ startSessionResponse: response }));
 
       // when
       const error = await getError(
         async (): Promise<unknown> => await Kindle.fromConfig(config())
+      );
+
+      // then
+      expect(error).toBeInstanceOf(UnexpectedResponseError);
+      expect(error).toEqual(
+        expect.objectContaining({
+          message: `Unexpected status code: ${status}`,
+          response,
+        })
+      );
+    }
+  );
+
+  test.each([400])(
+    "should throw when book details response status is unexpected %s",
+    async (status) => {
+      // given
+      const response = {
+        headers: {},
+        status,
+        body: "{}",
+        cookies: {},
+        target: faker.internet.url(),
+      } satisfies TLSClientResponseData;
+      useScenario(unexpectedResponse({ getBookDetailsResponse: response }));
+
+      // when
+      const client = await Kindle.fromConfig(config());
+      const books = client.defaultBooks;
+
+      const error = await getError(
+        async (): Promise<unknown> => books[0].details()
+      );
+
+      // then
+      expect(error).toBeInstanceOf(UnexpectedResponseError);
+      expect(error).toEqual(
+        expect.objectContaining({
+          message: `Unexpected status code: ${status}`,
+          response,
+        })
+      );
+    }
+  );
+
+  test.each([400])(
+    "should throw when book metadata response status is unexpected %s",
+    async (status) => {
+      // given
+      const response = {
+        headers: {},
+        status,
+        body: "{}",
+        cookies: {},
+        target: faker.internet.url(),
+      } satisfies TLSClientResponseData;
+      useScenario(unexpectedResponse({ getBookMetaDataResponse: response }));
+
+      // when
+      const client = await Kindle.fromConfig(config());
+      const books = client.defaultBooks;
+
+      const error = await getError(
+        async (): Promise<unknown> => books[0].fullDetails()
       );
 
       // then
