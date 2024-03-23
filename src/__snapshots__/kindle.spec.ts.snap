@@ -79,6 +79,27 @@ exports[`pagination > should only get the first page of book results when { fetc
 ]
 `;
 
+exports[`search > should use query when search term is setu 1`] = `
+[
+  KindleBook {
+    "asin": "B000FBJG4U",
+    "authors": [
+      {
+        "firstName": "Jules Verne",
+        "lastName": "",
+      },
+    ],
+    "imageUrl": "https://www.amazon.com/dp/B000FBJG4U",
+    "mangaOrComicAsin": false,
+    "originType": "purchased",
+    "productUrl": "https://www.amazon.com/dp/B000FBJG4U",
+    "resourceType": "EBOOK",
+    "title": "Journey to the Center of the Earth",
+    "webReaderUrl": "https://read.amazon.com/kp/kshare?asin=B000FBJG4U&id=wRj3DwAAQBAJ",
+  },
+]
+`;
+
 exports[`should fetch first page when created 1`] = `
 [
   KindleBook {

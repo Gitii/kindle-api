@@ -5,7 +5,7 @@ import {
   HttpClient,
   TlsClientConfig,
 } from "./http-client.js";
-import { Filter, Query } from "./query-filter.js";
+import { QueryOptions } from "./query-options.js";
 
 export type {
   KindleBook,
@@ -66,11 +66,10 @@ export class Kindle {
     "https://read.amazon.com/kindle-library/search?query=&libraryType=BOOKS&sortType=recency&querySize=50";
   public static readonly DEFAULT_QUERY = Object.freeze({
     sortType: "acquisition_desc",
-  } satisfies Query);
-  public static readonly DEFAULT_FILTER = Object.freeze({
     querySize: 50,
     fetchAllPages: false,
-  } satisfies Filter);
+    searchTerm: "",
+  } satisfies QueryOptions);
 
   /**
    * The default list of books fetched when setting up {@link Kindle}
@@ -138,8 +137,7 @@ export class Kindle {
     client: HttpClient,
     version?: string,
     args?: {
-      query?: Query;
-      filter?: Filter;
+      query?: QueryOptions;
     }
   ): Promise<{
     books: KindleBook[];
@@ -149,17 +147,13 @@ export class Kindle {
       ...Kindle.DEFAULT_QUERY,
       ...args?.query,
     };
-    const filter = {
-      ...Kindle.DEFAULT_FILTER,
-      ...args?.filter,
-    };
 
     let allBooks: KindleBook[] = [];
     let latestSessionId: string | undefined;
 
     // loop until we get less than the requested amount of books or hit the limit
     do {
-      const url = toUrl(query, filter);
+      const url = toUrl(query);
       const { books, sessionId, paginationToken } = await fetchBooks(
         client,
         url,
@@ -171,10 +165,10 @@ export class Kindle {
       allBooks = [...allBooks, ...books];
 
       // update offset
-      filter.paginationToken = paginationToken;
+      query.paginationToken = paginationToken;
     } while (
-      filter.paginationToken !== undefined &&
-      filter.fetchAllPages === true
+      query.paginationToken !== undefined &&
+      query.fetchAllPages === true
     );
 
     return {
@@ -183,10 +177,7 @@ export class Kindle {
     };
   }
 
-  async books(args?: {
-    query?: Query;
-    filter?: Filter;
-  }): Promise<KindleBook[]> {
+  async books(args?: { query?: QueryOptions }): Promise<KindleBook[]> {
     const result = await Kindle.baseRequest(this.#client, undefined, args);
     // refreshing the internal session every time books is called.
     // This doesn't prevent us from calling the books endpoint but

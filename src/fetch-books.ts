@@ -1,7 +1,7 @@
 import { KindleBook, KindleBookData } from "./book.js";
 import { HttpClient } from "./http-client.js";
 import { Kindle } from "./kindle.js";
-import { Query, Filter } from "./query-filter.js";
+import { QueryOptions } from "./query-options.js";
 
 export async function fetchBooks(
   client: HttpClient,
@@ -29,11 +29,10 @@ export async function fetchBooks(
   };
 }
 
-export function toUrl(query: Query, filter: Filter): string {
+export function toUrl(query: QueryOptions): string {
   const url = new URL(Kindle.BOOKS_URL);
   const searchParams = {
     ...query,
-    ...filter,
   };
 
   for (const [key, value] of Object.entries(searchParams)) {
@@ -41,10 +40,17 @@ export function toUrl(query: Query, filter: Filter): string {
       continue; // pagination handling is internal only and not part of the kindle api
     }
 
-    if (value !== undefined) {
-      url.searchParams.set(key, value.toString());
+    let searchKey: string;
+    if (key === "searchTerm") {
+      searchKey = "query";
     } else {
-      url.searchParams.delete(key);
+      searchKey = key;
+    }
+
+    if (value !== undefined) {
+      url.searchParams.set(searchKey, value.toString());
+    } else {
+      url.searchParams.delete(searchKey);
     }
   }
 

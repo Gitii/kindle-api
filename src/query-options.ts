@@ -1,4 +1,4 @@
-export interface Query {
+export interface QueryOptions {
   /**
    * Defines the order of the results.
    * The default is "recency".
@@ -9,9 +9,7 @@ export interface Query {
     | "author"
     | "acquisition_desc"
     | "acquisition_asc";
-}
 
-export interface Filter {
   /**
    * Filter by abonnement.
    * By default, the filter is unset.
@@ -34,4 +32,10 @@ export interface Filter {
    * The default value is false.
    */
   fetchAllPages?: boolean;
+
+  /**
+   * The search term to filter the results by.
+   * The default is an empty string.
+   */
+  searchTerm?: string;
 }
