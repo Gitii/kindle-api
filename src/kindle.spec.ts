@@ -9,8 +9,9 @@ import { singleBook } from "./__test__/scenarios/single-book.js";
 import { startSession } from "./__test__/scenarios/start-session.js";
 import { unexpectedResponse } from "./__test__/scenarios/unexpected-response.js";
 import { KindleConfiguration, Kindle, AuthSessionError, UnexpectedResponseError } from "./kindle.js";
-import { Filter } from "./query-filter.js";
 import { TLSClientResponseData } from "./tls-client-api.js";
+import { QueryOptions } from "./query-options.js";
+import { search } from "./__test__/scenarios/search.js";
 
 const cookies = process.env.COOKIES;
 
@@ -54,9 +55,9 @@ describe("pagination", () => {
     {
       fetchAllPages: false,
     },
-  ] satisfies Filter[])(
+  ] satisfies QueryOptions[])(
     "should only get the first page of book results when %s",
-    async (filter) => {
+    async (query) => {
       // given
       useScenario(startSession()); // used for initial setup
       const kindle = await Kindle.fromConfig(config());
@@ -65,7 +66,7 @@ describe("pagination", () => {
       useScenario(multiplePages); // used for this test
 
       // when
-      const books = await kindle.books({ filter });
+      const books = await kindle.books({ query });
 
       // then
       expect(books).toMatchSnapshot();
@@ -82,7 +83,7 @@ describe("pagination", () => {
     useScenario(multiplePages); // used for this test
 
     // when
-    const books = await kindle.books({ filter: { fetchAllPages: true } });
+    const books = await kindle.books({ query: { fetchAllPages: true } });
 
     // then
     expect(books).toMatchSnapshot();
@@ -237,4 +238,22 @@ describe("unexpected response errors", () => {
       );
     }
   );
+});
+
+describe("search", () => {
+  test("should use query when search term is setu", async () => {
+    // given
+    useScenario(startSession()); // used for initial setup
+    const kindle = await Kindle.fromConfig(config());
+    expect(kindle.defaultBooks.length).toBe(0);
+
+    useScenario(search); // used for this test
+
+    // when
+    const books = await kindle.books({ query: { searchTerm: "test" } });
+
+    // then
+    expect(books).toMatchSnapshot();
+    expect(books.length).toBe(1);
+  });
 });
