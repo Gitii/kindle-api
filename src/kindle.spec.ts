@@ -241,7 +241,7 @@ describe("unexpected response errors", () => {
 });
 
 describe("search", () => {
-  test("should use query when search term is setu", async () => {
+  test("should use query when search term is setup", async () => {
     // given
     useScenario(startSession()); // used for initial setup
     const kindle = await Kindle.fromConfig(config());
