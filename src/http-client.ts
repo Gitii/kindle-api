@@ -1,3 +1,4 @@
+import { KindleBook } from "./book.js";
 import {
   TLSClientRequestPayload,
   TLSClientResponseData,
@@ -8,11 +9,30 @@ export const USER_AGENT =
 
 const JSONP_REGEX = /\(({.*})\)/;
 
+export interface HttpClient {
+  request(
+    url: string,
+    payload?: TLSClientRequestPayload
+  ): Promise<TLSClientResponseData>;
+  parseJsonpResponse<T>(response: TLSClientResponseData): T | undefined;
+  updateSession(id: string): void;
+  updateAdpSession(id: string): void;
+  getSessionId(): string | undefined;
+  getAdpSessionId(): string | undefined;
+  extractSetCookies(response: TLSClientResponseData): Record<string, string>;
+  serializeCookies(): string;
+
+  initializeSession?: (args: { deviceSerialNumber: string }) => Promise<{
+    books: KindleBook[];
+    sessionId: string;
+  }>;
+}
+
 /**
  * HTTPClient for doing http requests
  * Can be initialized with a custom CycleTLSClient
  */
-export class HttpClient {
+export class DefaultHttpClient implements HttpClient {
   private sessionId?: string;
   private adpSessionId?: string;
 
