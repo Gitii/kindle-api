@@ -5,6 +5,7 @@ import {
   KindleRequiredCookies,
   HttpClient,
   TlsClientConfig,
+  DefaultHttpClient,
 } from "./http-client.js";
 import { QueryOptions } from "./query-options.js";
 
@@ -21,7 +22,8 @@ export type {
 } from "./book-metadata.js";
 
 export {
-  HttpClient,
+  type HttpClient,
+  DefaultHttpClient,
   type KindleRequiredCookies,
   type TlsClientConfig,
 } from "./http-client.js";
@@ -118,19 +120,30 @@ export class Kindle {
       typeof config.cookies === "string"
         ? Kindle.deserializeCookies(config.cookies)
         : config.cookies;
-    const client =
+
+    const client: HttpClient =
       config.clientFactory?.(cookies, config.tlsServer) ??
-      new HttpClient(cookies, config.tlsServer);
+      new DefaultHttpClient(cookies, config.tlsServer);
 
-    const { sessionId, books } = await Kindle.baseRequest(baseUrl, client);
-    client.updateSession(sessionId);
+    let books: KindleBook[];
+    let sessionId: string;
 
-    const deviceInfo = await Kindle.deviceToken(
-      baseUrl,
-      client,
-      config.deviceToken
-    );
-    client.updateAdpSession(deviceInfo.deviceSessionToken);
+    if (client.initializeSession !== undefined) {
+      ({ sessionId, books } = await client.initializeSession({
+        baseUrl,
+        deviceSerialNumber: config.deviceToken,
+      }));
+    } else {
+      ({ sessionId, books } = await Kindle.baseRequest(baseUrl, client));
+      client.updateSession(sessionId);
+
+      const deviceInfo = await Kindle.deviceToken(
+        baseUrl,
+        client,
+        config.deviceToken
+      );
+      client.updateAdpSession(deviceInfo.deviceSessionToken);
+    }
 
     return new this(
       {
